@@ -8,7 +8,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 //import Auth from "./pages/Auth";
 //import Profile from "./pages/Profile";
-//import AboutKFR from "./pages/AboutKFR";
+import AboutPage from "./pages/AboutPage.jsx";
 //import Rules from "./pages/Rules";
 import BookDetails from "./pages/BookDetails";
 //import Announcements from "./pages/Announcements";
@@ -56,9 +56,9 @@ export default function App() {
         {/* ✅ Keep dev’s code in the conflict: use /books/:id (not /book/:id) */}
         <Route path="/books/:id" element={<BookDetails />} />
         <Route path="/contact" element={<Contact />} />
+        
+        <Route path="/about/:slug" element={<AboutPage />} />
         {/*
-        <Route path="/about/kfr" element={<AboutKFR />} />
-        <Route path="/about/rules" element={<Rules />} />
         <Route path="/auth" element={<Auth />} />
         <Route
           path="/manage/announcements"
