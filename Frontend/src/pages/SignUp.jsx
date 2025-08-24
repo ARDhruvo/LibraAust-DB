@@ -53,23 +53,41 @@ const SelectField = ({
   </div>
 );
 
+// Custom Checkbox component
+// Updated CheckboxField component
+const CheckboxField = ({
+  field,
+  form: { setFieldValue, touched, errors },
+  ...props
+}) => (
+  <div className="flex items-center">
+    <input
+      {...field}
+      {...props}
+      type="checkbox"
+      checked={field.value}
+      onChange={(e) =>
+        setFieldValue(field.name, e.target.checked ? "true" : "false")
+      }
+      className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
+        touched[field.name] && errors[field.name] ? "border-red-500" : ""
+      }`}
+    />
+    <label htmlFor={field.name} className="ml-2 block text-sm text-gray-900">
+      {props.label}
+    </label>
+    {touched[field.name] && errors[field.name] && (
+      <div className="text-red-500 text-sm mt-1">{errors[field.name]}</div>
+    )}
+  </div>
+);
+
 const SignUp = () => {
   const navigate = useNavigate();
 
-  const departments = [
-    "Computer Science & Engineering",
-    "Electrical & Electronic Engineering",
-    "Mechanical Engineering",
-    "Civil Engineering",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "Business Administration",
-    "Economics",
-    "English Literature",
-  ];
+  const departments = ["CSE", "EEE", "BBA", "ME", "TE", "CE", "IPE", "ARCH"];
 
-  const semesters = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+  const semesters = ["1.1", "1.2", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2"];
 
   const validationSchema = Yup.object().shape({
     name: Yup.string().required("Full name is required"),
@@ -80,6 +98,7 @@ const SignUp = () => {
     semester: Yup.string().required("Semester is required"),
     phone: Yup.string().nullable(),
     email: Yup.string().email("Invalid email").required("Email is required"),
+    studentship: Yup.boolean().default(true),
     password: Yup.string()
       .min(8, "Password must be at least 8 characters")
       .matches(/[a-z]/, "Password must contain at least one lowercase letter")
@@ -93,18 +112,23 @@ const SignUp = () => {
 
   const handleSubmit = async (values, { setSubmitting, setErrors }) => {
     try {
-      // 1. First get CSRF cookie
-      await api.get("/sanctum/csrf-cookie");
+      // Remove password fields before sending to students endpoint
+      const { password, password_confirmation, ...studentData } = values;
 
-      // 2. Send registration request
-      const response = await api.post("/api/v1/students", values);
+      console.log("Sending student data:", studentData);
+
+      const response = await api.post("/v1/students", studentData, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      });
 
       toast.success("Registration successful!");
       navigate("/");
     } catch (error) {
       console.error("Registration error:", error);
 
-      // Handle validation errors from Laravel
       if (error.response?.data?.errors) {
         const laravelErrors = {};
         Object.entries(error.response.data.errors).forEach(
@@ -116,9 +140,7 @@ const SignUp = () => {
       }
 
       const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Registration failed. Please try again.";
+        error.response?.data?.message || "Registration failed";
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -145,6 +167,7 @@ const SignUp = () => {
             semester: "",
             phone: "",
             email: "",
+            studentship: true, // Default to true
             password: "",
             password_confirmation: "",
           }}
@@ -196,6 +219,13 @@ const SignUp = () => {
                 component={TextField}
                 label="Phone Number (Optional)"
                 placeholder="Enter your phone number"
+              />
+
+              {/* Studentship Checkbox */}
+              <Field
+                name="studentship"
+                component={CheckboxField}
+                label="I am currently a student"
               />
 
               {/* User Account Information */}
