@@ -1,92 +1,21 @@
-// src/pages/SignUp.jsx
-import { Formik, Form, Field } from "formik";
+import { Formik, Form } from "formik";
 import { Link, useNavigate } from "react-router-dom";
 import * as Yup from "yup";
 import { toast } from "react-hot-toast";
-import api from "../services/api"; // Import axios instance
-
-// Create a custom TextField component since we removed the inputs folder
-const TextField = ({ field, form: { touched, errors }, ...props }) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {props.label}
-    </label>
-    <input
-      {...field}
-      {...props}
-      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-        touched[field.name] && errors[field.name]
-          ? "border-red-500"
-          : "border-gray-300"
-      }`}
-    />
-    {touched[field.name] && errors[field.name] && (
-      <div className="text-red-500 text-sm mt-1">{errors[field.name]}</div>
-    )}
-  </div>
-);
-
-const SelectField = ({
-  field,
-  form: { touched, errors },
-  children,
-  ...props
-}) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {props.label}
-    </label>
-    <select
-      {...field}
-      {...props}
-      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-        touched[field.name] && errors[field.name]
-          ? "border-red-500"
-          : "border-gray-300"
-      }`}
-    >
-      {children}
-    </select>
-    {touched[field.name] && errors[field.name] && (
-      <div className="text-red-500 text-sm mt-1">{errors[field.name]}</div>
-    )}
-  </div>
-);
-
-// Custom Checkbox component
-// Updated CheckboxField component
-const CheckboxField = ({
-  field,
-  form: { setFieldValue, touched, errors },
-  ...props
-}) => (
-  <div className="flex items-center">
-    <input
-      {...field}
-      {...props}
-      type="checkbox"
-      checked={field.value}
-      onChange={(e) =>
-        setFieldValue(field.name, e.target.checked ? "true" : "false")
-      }
-      className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
-        touched[field.name] && errors[field.name] ? "border-red-500" : ""
-      }`}
-    />
-    <label htmlFor={field.name} className="ml-2 block text-sm text-gray-900">
-      {props.label}
-    </label>
-    {touched[field.name] && errors[field.name] && (
-      <div className="text-red-500 text-sm mt-1">{errors[field.name]}</div>
-    )}
-  </div>
-);
+import api from "../services/api";
+import TextField from "../components/TextField";
+import PasswordField from "../components/PasswordField";
+import {
+  FormControlLabel,
+  Checkbox,
+  FormHelperText,
+  MenuItem,
+} from "@mui/material";
 
 const SignUp = () => {
   const navigate = useNavigate();
 
   const departments = ["CSE", "EEE", "BBA", "ME", "TE", "CE", "IPE", "ARCH"];
-
   const semesters = ["1.1", "1.2", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2"];
 
   const validationSchema = Yup.object().shape({
@@ -97,7 +26,14 @@ const SignUp = () => {
     department: Yup.string().required("Department is required"),
     semester: Yup.string().required("Semester is required"),
     phone: Yup.string().nullable(),
-    email: Yup.string().email("Invalid email").required("Email is required"),
+    email: Yup.string()
+      .email("Invalid email")
+      .required("Email is required")
+      .test(
+        "aust-email",
+        "Email must end with @aust.edu",
+        (value) => value && value.endsWith("@aust.edu")
+      ),
     studentship: Yup.boolean().default(true),
     password: Yup.string()
       .min(8, "Password must be at least 8 characters")
@@ -112,10 +48,15 @@ const SignUp = () => {
 
   const handleSubmit = async (values, { setSubmitting, setErrors }) => {
     try {
-      // Remove password fields before sending to students endpoint
-      const { password, password_confirmation, ...studentData } = values;
+      // Convert studentship to string for backend
+      const processedValues = {
+        ...values,
+        studentship: values.studentship ? "true" : "false",
+      };
 
-      console.log("Sending student data:", studentData);
+      // Remove password fields
+      const { password, password_confirmation, ...studentData } =
+        processedValues;
 
       const response = await api.post("/v1/students", studentData, {
         headers: {
@@ -123,6 +64,8 @@ const SignUp = () => {
           Accept: "application/json",
         },
       });
+
+      // Send the other data to usercontroller
 
       toast.success("Registration successful!");
       navigate("/");
@@ -167,89 +110,90 @@ const SignUp = () => {
             semester: "",
             phone: "",
             email: "",
-            studentship: true, // Default to true
+            studentship: true,
             password: "",
             password_confirmation: "",
           }}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
         >
-          {({ isSubmitting, errors, touched }) => (
+          {({ isSubmitting, errors, touched, setFieldValue, values }) => (
             <Form className="space-y-4">
               {/* Student Information */}
-              <Field
+              <TextField
                 name="name"
-                component={TextField}
                 label="Full Name *"
                 placeholder="Enter your full name"
               />
 
-              <Field
+              <TextField
                 name="student_id"
-                component={TextField}
                 label="Student ID *"
                 type="number"
                 placeholder="Enter your student ID"
               />
 
-              <Field
-                name="department"
-                component={SelectField}
-                label="Department *"
-              >
-                <option value="">Select Department</option>
+              <TextField name="department" label="Department *" select>
+                <MenuItem value="">Select Department</MenuItem>
                 {departments.map((dept) => (
-                  <option key={dept} value={dept}>
+                  <MenuItem key={dept} value={dept}>
                     {dept}
-                  </option>
+                  </MenuItem>
                 ))}
-              </Field>
+              </TextField>
 
-              <Field name="semester" component={SelectField} label="Semester *">
-                <option value="">Select Semester</option>
+              <TextField name="semester" label="Semester *" select>
+                <MenuItem value="">Select Semester</MenuItem>
                 {semesters.map((sem) => (
-                  <option key={sem} value={sem}>
+                  <MenuItem key={sem} value={sem}>
                     {sem}
-                  </option>
+                  </MenuItem>
                 ))}
-              </Field>
+              </TextField>
 
-              <Field
+              <TextField
                 name="phone"
-                component={TextField}
                 label="Phone Number (Optional)"
                 placeholder="Enter your phone number"
               />
 
-              {/* Studentship Checkbox */}
-              <Field
-                name="studentship"
-                component={CheckboxField}
-                label="I am currently a student"
-              />
+              {/* Studentship Checkbox - Now properly working */}
+              <div className="mt-4">
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={values.studentship}
+                      onChange={(e) =>
+                        setFieldValue("studentship", e.target.checked)
+                      }
+                      name="studentship"
+                      color="primary"
+                    />
+                  }
+                  label="I am currently a student"
+                />
+                {touched.studentship && errors.studentship && (
+                  <FormHelperText error>{errors.studentship}</FormHelperText>
+                )}
+              </div>
 
               {/* User Account Information */}
-              <Field
+              <TextField
                 name="email"
-                component={TextField}
                 label="Email *"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Enter your @aust.edu email"
               />
 
-              <Field
+              <PasswordField
                 name="password"
-                component={TextField}
                 label="Password *"
-                type="password"
                 placeholder="Create a password"
               />
 
-              <Field
+              <PasswordField
                 name="password_confirmation"
-                component={TextField}
                 label="Confirm Password *"
-                type="password"
                 placeholder="Confirm your password"
               />
 
