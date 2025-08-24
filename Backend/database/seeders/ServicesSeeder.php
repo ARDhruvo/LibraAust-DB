@@ -41,7 +41,8 @@ class ServicesSeeder extends Seeder
             ),
             (
                 'rules',
-                'Membership Eligibility
+    '
+    Membership Eligibility
     * All AUST students, faculty, and staff are eligible
     * Valid university ID card required
     * Membership activated on enrollment/employment
