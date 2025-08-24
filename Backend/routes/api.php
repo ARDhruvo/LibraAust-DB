@@ -3,6 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// routes/api.php
+use App\Http\Controllers\PageController;
+
+Route::get('/pages/{slug}', [PageController::class, 'show']);
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
