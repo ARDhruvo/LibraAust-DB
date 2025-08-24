@@ -42,10 +42,10 @@ class ServicesSeeder extends Seeder
             (
                 'rules',
                 'Membership Eligibility
-    - All AUST students, faculty, and staff are eligible
-    - Valid university ID card required
-    - Membership activated on enrollment/employment
-    - Lost ID cards must be reported immediately
+    * All AUST students, faculty, and staff are eligible
+    * Valid university ID card required
+    * Membership activated on enrollment/employment
+    * Lost ID cards must be reported immediately
 
     Borrowing Policies
     Students: 3 books / 14 days / 1 renewal
