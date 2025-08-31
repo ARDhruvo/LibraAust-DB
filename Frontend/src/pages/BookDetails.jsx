@@ -1,10 +1,31 @@
-// src/pages/BookDetails.jsx
 import { useParams, Link } from "react-router-dom";
-import { sampleBooks } from "../lib/data.js";
+import { useEffect, useState } from "react";
 
 export default function BookDetails() {
   const { id } = useParams();
-  const book = sampleBooks.find(b => String(b.id) === id);
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchBook() {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/api/books/${id}`);
+        if (!res.ok) throw new Error("Book not found");
+        const data = await res.json();
+        setBook(data);
+      } catch (err) {
+        console.error(err);
+        setBook(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchBook();
+  }, [id]);
+
+  if (loading) {
+    return <div className="text-center py-10 text-gray-600">Loading book...</div>;
+  }
 
   if (!book) {
     return (
@@ -36,7 +57,7 @@ export default function BookDetails() {
         {/* Book Cover */}
         <div className="p-6 flex justify-center items-center bg-gray-50">
           <img
-            src={book.cover}
+            src={book.cover_url}
             alt={book.title}
             className="w-full max-w-xs rounded-xl shadow-lg"
           />
@@ -49,7 +70,7 @@ export default function BookDetails() {
             <span className="font-semibold">Author:</span> {book.author}
           </p>
           <p className="text-gray-600 mb-2">
-            <span className="font-semibold">Department:</span> {book.department}
+            <span className="font-semibold">Department:</span> {book.category}
           </p>
           <p className="text-gray-600 mb-2">
             <span className="font-semibold">Published:</span> {book.year}
@@ -57,21 +78,6 @@ export default function BookDetails() {
           <p className="text-gray-600 mb-4">
             <span className="font-semibold">Type:</span> {book.type}
           </p>
-
-          {/* Tags */}
-          <div className="mt-2">
-            <span className="font-semibold text-gray-700">Tags:</span>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {book.tags.map((tag, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          </div>
 
           {/* Description */}
           <p className="mt-6 text-gray-700 leading-relaxed">{book.description}</p>

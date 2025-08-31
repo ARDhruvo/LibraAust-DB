@@ -8,6 +8,13 @@ use App\Http\Controllers\PageController;
 
 Route::get('/pages/{slug}', [PageController::class, 'show']);
 
+use App\Http\Controllers\BookController;
+
+// All Books
+Route::get('/books', [BookController::class, 'index']);
+
+// Single Book by ID
+Route::get('/books/{id}', [BookController::class, 'show']);
 /*
 |--------------------------------------------------------------------------
 | API Routes
