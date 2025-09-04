@@ -11,7 +11,7 @@ class StoreUsersRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,9 @@ class StoreUsersRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'email' => ['required','email'],
+            'password_hash' => ['required','min:8'],
+            'role' => ['required',Rule::in(['borrower','librarian'])]
         ];
     }
 }
