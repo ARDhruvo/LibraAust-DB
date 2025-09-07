@@ -72,6 +72,7 @@ class StudentsController extends Controller
                 'role' => 'student'
             ];
 
+
             $userColumns = implode(', ', array_keys($userData));
             $userPlaceholders = implode(', ', array_fill(0, count($userData), '?'));
 
@@ -100,9 +101,14 @@ class StudentsController extends Controller
      */
     public function show(Students $student) // Renamed parameter to $student for clarity
     {
-        // Eloquent automatically injects the model instance based on the route ID
-        // No need to manually fetch it
-        return $student;
+        // Raw SQL query to get specific student
+        $student = DB::select('SELECT * FROM students WHERE id = ?', [$students->id]);
+
+        if (empty($student)) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        return $student[0];
     }
 
     /**
@@ -118,11 +124,19 @@ class StudentsController extends Controller
             unset($validated['password']);
         }
 
-        // Use Eloquent to update the student
-        $student->update($validated);
+        // Build SET clause for prepared statement
+        $setClause = implode(' = ?, ', array_keys($validated)) . ' = ?';
 
-        // Return the updated student (fresh instance from the database)
-        return $student->fresh();
+        // Execute raw SQL update with prepared statement
+        DB::update(
+            "UPDATE students SET $setClause WHERE id = ?",
+            array_merge(array_values($validated), [$students->id])
+        );
+
+        // Fetch the updated student
+        $updatedStudent = DB::select('SELECT * FROM students WHERE id = ?', [$students->id]);
+
+        return $updatedStudent[0];
     }
 
     /**
@@ -130,9 +144,8 @@ class StudentsController extends Controller
      */
     public function destroy(Students $student) // Renamed parameter to $student
     {
-        // Use Eloquent to delete the student
-        $student->delete();
-
+        // Raw SQL query to delete student
+        DB::delete('DELETE FROM students WHERE id = ?', [$students->id]);
         return response()->json(['message' => 'Student deleted successfully'], 200);
     }
 }
