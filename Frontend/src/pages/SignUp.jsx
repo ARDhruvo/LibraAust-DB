@@ -55,8 +55,7 @@ const SignUp = () => {
       };
 
       // Remove password fields
-      const { password, password_confirmation, ...studentData } =
-        processedValues;
+      const { password_confirmation, ...studentData } = processedValues;
 
       const response = await api.post("/v1/students", studentData, {
         headers: {
