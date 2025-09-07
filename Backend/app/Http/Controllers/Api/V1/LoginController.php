@@ -25,7 +25,9 @@ class LoginController extends Controller
             ],
         ]);
 
-        $user = DB::table('users')->where('email', $request->email)->first();
+        $user = DB::select('SELECT * FROM users WHERE email = ?', [$request->email]);
+
+        // $user = DB::table('users')->where('email', $request->email)->first();
 
         // If the user is not found
         if (empty($user)) {
@@ -34,6 +36,8 @@ class LoginController extends Controller
                 'errors' => 'Invalid email or password',
             ], 401);
         }
+
+        $user = $user[0]; // Because DB::select returns an array of results even if there's only one
 
         // User found, check password hashing
         if (!Hash::check($request->password, $user->password_hash)) {

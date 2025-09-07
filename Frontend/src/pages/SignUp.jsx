@@ -64,6 +64,8 @@ const SignUp = () => {
         },
       });
 
+      console.log("Student created:", response.data);
+
       // Send the other data to usercontroller
 
       toast.success("Registration successful! Please sign in.");
