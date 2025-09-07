@@ -55,8 +55,7 @@ const SignUp = () => {
       };
 
       // Remove password fields
-      const { password, password_confirmation, ...studentData } =
-        processedValues;
+      const { password_confirmation, ...studentData } = processedValues;
 
       const response = await api.post("/v1/students", studentData, {
         headers: {
@@ -67,8 +66,8 @@ const SignUp = () => {
 
       // Send the other data to usercontroller
 
-      toast.success("Registration successful!");
-      navigate("/");
+      toast.success("Registration successful! Please sign in.");
+      navigate("/signin");
     } catch (error) {
       console.error("Registration error:", error);
 

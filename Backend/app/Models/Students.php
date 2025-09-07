@@ -10,18 +10,19 @@ class Students extends Model
     use HasFactory;
 
     protected $fillable = [
-    'student_id', 
-    'name', 
-    'department', 
-    'semester', 
-    'email', 
-    'phone', 
-    'borrowed_id',
-    'studentship'
+        'student_id',
+        'name',
+        'department',
+        'semester',
+        'email',
+        'phone',
+        'borrowed_id',
+        'studentship',
+        'password'
     ];
 
-    public function students()
+    public function user()
     {
-        return $this->belongsTo(Users::class);
+        return $this->belongsTo(Users::class, 'email', 'email');
     }
 }

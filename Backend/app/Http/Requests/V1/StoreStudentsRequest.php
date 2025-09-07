@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Http\Requests\V1;
+namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreStudentsRequest extends FormRequest
 {
@@ -12,7 +11,7 @@ class StoreStudentsRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -23,23 +22,7 @@ class StoreStudentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // If it doesnt work change here
-            'name' => ['required'],
-            'department' => ['required',Rule::in(['CSE','EEE','BBA','ME','TE','CE','IPE','ARCH'])],
-            'semester' => ['required',Rule::in(['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2'])],
-            'email' => ['required','email'],
-            'phone' => ['nullable'],
-            'studentship' => ['required'],
-            // Remember to change this later in camelcase
-            'student_id' => ['required'],
-            'borrowed_id' => ['nullable'] // Assuming borrowed_id refers to a book's id
+            //
         ];
     }
-
-    // protection function prepareForValidation()
-    // {
-    //     $this->merge([
-    //         'student_id' => $this->student_id
-    //     ]);
-    // }
 }
