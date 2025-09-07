@@ -23,6 +23,9 @@ import Thesis from "./pages/Thesis.jsx";
 import ThesisDetail from "./pages/ThesisDetail.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 
+import BookEdit from "./pages/BookEdit.jsx";
+import ThesisEdit from "./pages/ThesisEdit.jsx";
+
 export default function App() {
   return (
     <>
@@ -55,6 +58,8 @@ export default function App() {
 
         {/* ✅ Keep dev’s code in the conflict: use /books/:id (not /book/:id) */}
         <Route path="/books/:id" element={<BookDetails />} />
+        <Route path="/books/:id/edit" element={<BookEdit />} />
+        <Route path="/thesis/:id/edit" element={<ThesisEdit />} />
         <Route path="/contact" element={<Contact />} />
         
         <Route path="/about/:slug" element={<AboutPage />} />

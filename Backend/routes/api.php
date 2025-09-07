@@ -8,13 +8,13 @@ use App\Http\Controllers\PageController;
 
 Route::get('/pages/{slug}', [PageController::class, 'show']);
 
-use App\Http\Controllers\BookController;
+use App\Http\Controllers\PublicationController;
 
-// All Books
-Route::get('/books', [BookController::class, 'index']);
-
-// Single Book by ID
-Route::get('/books/{id}', [BookController::class, 'show']);
+Route::get('/publications', [PublicationController::class, 'index']);
+Route::get('/publications/{id}', [PublicationController::class, 'show']);
+Route::post('/publications', [PublicationController::class, 'store']);
+Route::put('/publications/{id}', [PublicationController::class, 'update']);
+Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
 /*
 |--------------------------------------------------------------------------
 | API Routes
