@@ -10,15 +10,15 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('librarians', function (Blueprint $table) {
             $table->id();
+            $table->integer('librarian_id')->unique();
+            $table->string('name');
+            $table->string('designation')->nullable();
             $table->string('email')->unique();
-            $table->string('password_hash');
-            $table->string('role')->default('librarian'); // Possible roles: librarian, borrower
+            $table->string('phone')->nullable();
             $table->timestamps();
         });
-
-        // Add a foreign key constraint to the email column
     }
 
     /**
@@ -26,6 +26,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('librarians');
     }
 };
