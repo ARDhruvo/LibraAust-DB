@@ -30,10 +30,7 @@ class StudentsController extends Controller
         $validated = $request->validated();
 
         // Check if student_id already exists using Eloquent
-
-        $student = DB::select('SELECT * FROM students WHERE student_id = ?', [$validated['student_id']]);
-
-        if (!empty($student)) {
+        if (Students::where('student_id', $validated['student_id'])->exists()) {
             return response()->json([
                 'message' => 'Student ID already exists',
                 'error' => 'Duplicate student_id'
@@ -48,43 +45,22 @@ class StudentsController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get all the columns to insert
-            // $studentColumns = implode(', ', array_keys($validated));
-            $studentColumns = implode(', ', array_keys($validated));
-            $studentPlaceholders = implode(', ', array_fill(0, count($validated), '?'));
-            // $studentPlaceholders = implode(', ', array_fill(0, count($validated), '?'));
-
-            // Debugging bc I hate this
-            // return response()->json([
-            //     'message' => 'Debugging',
-            //     'student_values' => $validated
-            // ], 500);
-
             // Create the student using Eloquent
-            // $student = Students::create($validated);
-            DB::insert("INSERT INTO students ($studentColumns) VALUES ($studentPlaceholders)", array_values($validated));
+            $student = Students::create($validated);
 
             // Create Users account for the student
-
-            $userData = [
+            Users::create([
                 'email' => $validated['email'],
                 'password_hash' => Hash::make($password),
                 'role' => 'student'
-            ];
-
-
-            $userColumns = implode(', ', array_keys($userData));
-            $userPlaceholders = implode(', ', array_fill(0, count($userData), '?'));
-
-            DB::insert("INSERT INTO users ($userColumns) VALUES ($userPlaceholders)", array_values($userData));
+            ]);
 
             // Commit the transaction
             DB::commit();
 
             // Return the student resource
-            return response()->json([
-                'message' => 'Student registered successfully',
-            ], 201);
+            return new StudentsResource($student);
+
         } catch (\Exception $e) {
             // Rollback the transaction on error
             DB::rollBack();
@@ -101,14 +77,9 @@ class StudentsController extends Controller
      */
     public function show(Students $student) // Renamed parameter to $student for clarity
     {
-        // Raw SQL query to get specific student
-        $student = DB::select('SELECT * FROM students WHERE id = ?', [$students->id]);
-
-        if (empty($student)) {
-            return response()->json(['message' => 'Student not found'], 404);
-        }
-
-        return $student[0];
+        // Eloquent automatically injects the model instance based on the route ID
+        // No need to manually fetch it
+        return $student;
     }
 
     /**
@@ -124,19 +95,11 @@ class StudentsController extends Controller
             unset($validated['password']);
         }
 
-        // Build SET clause for prepared statement
-        $setClause = implode(' = ?, ', array_keys($validated)) . ' = ?';
+        // Use Eloquent to update the student
+        $student->update($validated);
 
-        // Execute raw SQL update with prepared statement
-        DB::update(
-            "UPDATE students SET $setClause WHERE id = ?",
-            array_merge(array_values($validated), [$students->id])
-        );
-
-        // Fetch the updated student
-        $updatedStudent = DB::select('SELECT * FROM students WHERE id = ?', [$students->id]);
-
-        return $updatedStudent[0];
+        // Return the updated student (fresh instance from the database)
+        return $student->fresh();
     }
 
     /**
@@ -144,8 +107,9 @@ class StudentsController extends Controller
      */
     public function destroy(Students $student) // Renamed parameter to $student
     {
-        // Raw SQL query to delete student
-        DB::delete('DELETE FROM students WHERE id = ?', [$students->id]);
+        // Use Eloquent to delete the student
+        $student->delete();
+
         return response()->json(['message' => 'Student deleted successfully'], 200);
     }
 }

@@ -1,12 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use DB;
 use Hash;
 use Illuminate\Http\Request;
 use App\Models\Users;
+use App\Models\Students;
+use App\Models\Faculties;
+use App\Models\Librarians; // Uncomment if you add a Librarians model
 
 class LoginController extends Controller
 {
@@ -57,7 +60,20 @@ class LoginController extends Controller
         // Note to future self: This works because it has model on $userModel
         // Why is this different? I have no idea but just know that sanctum requires model 
 
+        if ($user->role === 'student') {
+            $name = Students::where('email', $user->email)->value('name');
+        } elseif ($user->role === 'faculty') {
+            $name = Faculties::where('email', $user->email)->value('name');
+        }
+        // Uncomment when yall add Librarians
+        else {
+            $name = Librarians::where('email', $user->email)->value('name');
+        }
+
+
         return response()->json([
+            'role' => $user->role,
+            'name' => $name,
             'access_token' => $token
         ], 200);
     }
