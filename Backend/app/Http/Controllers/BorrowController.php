@@ -10,82 +10,84 @@ use Carbon\Carbon;
 class BorrowController extends Controller
 {
     // Borrow a publication
-    public function borrowPublication(Request $request, $publicationId)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'User not authenticated'], 401);
-        }
-        if (!in_array($user->role, ['student', 'faculty'])) {
-            return response()->json(['message' => 'Only students and faculty can borrow publications'], 403);
-        }
-
-        return DB::transaction(function () use ($user, $publicationId) {
-            // Lock publication row
-            $publication = DB::selectOne('SELECT * FROM publications WHERE id = ? FOR UPDATE', [$publicationId]);
-            if (!$publication) {
-                return response()->json(['message' => 'Publication not found'], 404);
-            }
-            if ($publication->available_copies <= 0) {
-                return response()->json(['message' => 'Publication is not available for borrowing'], 400);
-            }
-
-            // Already borrowed?
-            $existing = DB::selectOne(
-                'SELECT id FROM borrows WHERE borrowed_id = ? AND borrower_id = ? AND status IN ("borrowed","overdue")',
-                [$publicationId, $user->id]
-            );
-            if ($existing) {
-                return response()->json(['message' => 'You have already borrowed this publication'], 400);
-            }
-
-            // Borrowing limit
-            $activeCount = DB::selectOne(
-                'SELECT COUNT(*) AS cnt FROM borrows WHERE borrower_id = ? AND status IN ("borrowed","overdue")',
-                [$user->id]
-            )->cnt;
-            $max = $user->role === 'faculty' ? 10 : 3;
-            if ($activeCount >= $max) {
-                return response()->json(['message' => "You have reached your borrowing limit of {$max} publications"], 400);
-            }
-
-            $fineRate = $user->role === 'student' ? 5.00 : 0.00;
-            $borrowPeriod = $user->role === 'faculty' ? 14 : 7;
-            $returnDate = Carbon::now()->addDays($borrowPeriod)->toDateString();
-            $borrowDate = Carbon::now()->toDateString();
-
-            DB::insert(
-                'INSERT INTO borrows (borrowed_id, borrower_id, borrow_date, return_date, fine_rate, status, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, "borrowed", NOW(), NOW())',
-                [$publicationId, $user->id, $borrowDate, $returnDate, $fineRate]
-            );
-
-            DB::update('UPDATE publications SET available_copies = available_copies - 1 WHERE id = ?', [$publicationId]);
-
-            if ($user->role === 'student') {
-                DB::update('UPDATE students SET borrowed_id = ? WHERE email = ?', [$publicationId, $user->email]);
-            } elseif ($user->role === 'faculty') {
-                DB::update('UPDATE faculties SET borrowed_id = ? WHERE email = ?', [$publicationId, $user->email]);
-            }
-
-            $borrow = DB::selectOne(
-                'SELECT b.*, p.title AS publication_title, u.name AS borrower_name
-                 FROM borrows b
-                 JOIN publications p ON p.id = b.borrowed_id
-                 JOIN users u ON u.id = b.borrower_id
-                 WHERE b.borrowed_id = ? AND b.borrower_id = ?
-                 ORDER BY b.id DESC LIMIT 1',
-                [$publicationId, $user->id]
-            );
-
-            return response()->json([
-                'message' => 'Publication borrowed successfully',
-                'borrow' => $borrow,
-                'return_date' => $returnDate,
-                'fine_rate' => $fineRate
-            ], 201);
-        });
+    // Borrow a publication
+public function borrowPublication(Request $request, $publicationId)
+{
+    $user = Auth::user();
+    if (!$user) {
+        return response()->json(['message' => 'User not authenticated'], 401);
     }
+    if (!in_array($user->role, ['student', 'faculty'])) {
+        return response()->json(['message' => 'Only students and faculty can borrow publications'], 403);
+    }
+
+    return DB::transaction(function () use ($user, $publicationId) {
+        // Lock publication row
+        $publication = DB::selectOne('SELECT * FROM publications WHERE id = ? FOR UPDATE', [$publicationId]);
+        if (!$publication) {
+            return response()->json(['message' => 'Publication not found'], 404);
+        }
+        if ($publication->available_copies <= 0) {
+            return response()->json(['message' => 'Publication is not available for borrowing'], 400);
+        }
+
+        // Already borrowed?
+        $existing = DB::selectOne(
+            'SELECT id FROM borrows WHERE borrowed_id = ? AND borrower_id = ? AND status IN ("borrowed","overdue")',
+            [$publicationId, $user->id]
+        );
+        if ($existing) {
+            return response()->json(['message' => 'You have already borrowed this publication'], 400);
+        }
+
+        // Borrowing limit
+        $activeCount = DB::selectOne(
+            'SELECT COUNT(*) AS cnt FROM borrows WHERE borrower_id = ? AND status IN ("borrowed","overdue")',
+            [$user->id]
+        )->cnt;
+        $max = $user->role === 'faculty' ? 10 : 3;
+        if ($activeCount >= $max) {
+            return response()->json(['message' => "You have reached your borrowing limit of {$max} publications"], 400);
+        }
+
+        $fineRate = $user->role === 'student' ? 5.00 : 0.00;
+        $borrowPeriod = $user->role === 'faculty' ? 14 : 7;
+        $returnDate = Carbon::now()->addDays($borrowPeriod)->toDateString();
+        $borrowDate = Carbon::now()->toDateString();
+
+        DB::insert(
+            'INSERT INTO borrows (borrowed_id, borrower_id, borrow_date, return_date, fine_rate, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, "borrowed", NOW(), NOW())',
+            [$publicationId, $user->id, $borrowDate, $returnDate, $fineRate]
+        );
+
+        DB::update('UPDATE publications SET available_copies = available_copies - 1 WHERE id = ?', [$publicationId]);
+
+        if ($user->role === 'student') {
+            DB::update('UPDATE students SET borrowed_id = ? WHERE email = ?', [$publicationId, $user->email]);
+        } elseif ($user->role === 'faculty') {
+            DB::update('UPDATE faculties SET borrowed_id = ? WHERE email = ?', [$publicationId, $user->email]);
+        }
+
+        // Fixed query - removed u.name since it doesn't exist in users table
+        $borrow = DB::selectOne(
+            'SELECT b.*, p.title AS publication_title, u.email AS borrower_name
+             FROM borrows b
+             JOIN publications p ON p.id = b.borrowed_id
+             JOIN users u ON u.id = b.borrower_id
+             WHERE b.borrowed_id = ? AND b.borrower_id = ?
+             ORDER BY b.id DESC LIMIT 1',
+            [$publicationId, $user->id]
+        );
+
+        return response()->json([
+            'message' => 'Publication borrowed successfully',
+            'borrow' => $borrow,
+            'return_date' => $returnDate,
+            'fine_rate' => $fineRate
+        ], 201);
+    });
+}
 
     // Return a publication
     public function returnPublication(Request $request, $borrowId)
