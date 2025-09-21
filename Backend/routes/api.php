@@ -21,11 +21,11 @@ Route::post('/publications/{id}', [PublicationController::class, 'update']);
 Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
 
 
-use App\Http\Controllers\ChatbotController;
-
-Route::post('/chatbot', [ChatbotController::class, 'chat']);
-
 use App\Http\Controllers\BorrowController;
+
+use App\Http\Controllers\PageController;
+
+Route::get('/pages/{slug}', [PageController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
