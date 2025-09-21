@@ -41,7 +41,8 @@ class LibrarianController extends Controller
         ]);
 
         // Check if the librarian_id already exists
-        if (Librarians::where('librarian_id', $request['librarian_id'])->exists()) {
+        $exists = DB::select('SELECT * FROM librarians WHERE librarian_id = ?', [$request->librarian_id]);
+        if ($exists) {
             return response()->json([
                 'message' => 'Librarian ID already exists',
                 'error' => 'Duplicate Librarian ID'
@@ -56,14 +57,34 @@ class LibrarianController extends Controller
         DB::beginTransaction();
         try {
             // Create the librarian using Eloquent
-            $librarian = Librarians::create($request->all());
+            // $librarian = Librarians::create($request->all());
+
+            $librarian = DB::insert(
+                'INSERT INTO librarians (librarian_id, name, designation, email, phone) VALUES (?, ?, ?, ?, ?)',
+                [
+                    $request->input('librarian_id'),
+                    $request->input('name'),
+                    $request->input('designation'),
+                    $request->input('email'),
+                    $request->input('phone') ?? null // Handle null phone
+                ]
+            );
 
             // Create Users account for the librarian
-            Users::create([
-                'email' => $request->input('email'),
+            $userData = [
+                'email' => $request->email,
                 'password_hash' => Hash::make($password),
-                'role' => 'librarian'
-            ]);
+                'role' => 'faculty'
+            ];
+
+            DB::insert(
+                'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
+                [
+                    $userData['email'],
+                    $userData['password_hash'],
+                    $userData['role']
+                ]
+            );
 
             // Commit the transaction
             DB::commit();

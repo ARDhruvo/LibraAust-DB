@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Faculties;
 use App\Models\Users;
 use Illuminate\Http\Request;
-use DB;
-use Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class FacultyController extends Controller
 {
@@ -22,8 +22,10 @@ class FacultyController extends Controller
             'password' => 'required|string|min:8|regex:/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/',
         ]);
 
-        // Check if faculty_id already exists
-        if (Faculties::where('faculty_id', $request['faculty_id'])->exists()) {
+        // Check if faculty_id already exists using raw SQL
+        $exists = DB::select('SELECT * FROM faculties WHERE faculty_id = ?', [$request->faculty_id]);
+
+        if (!empty($exists)) {
             return response()->json([
                 'message' => 'Faculty ID already exists',
                 'error' => 'Duplicate Faculty ID'
@@ -31,31 +33,67 @@ class FacultyController extends Controller
         }
 
         // Extract password before creating faculty
-        $password = $request['password'];
-        unset($request['password']); // Remove password from faculty data
+        $password = $request->password;
 
-        // Transaction to send it to user table as well
-
+        // Start transaction
         DB::beginTransaction();
-        try {
-            // Create the faculty using Eloquent
-            $faculty = Faculties::create($request->all());
 
-            // Create Users account for the faculty
-            Users::create([
-                'email' => $request->input('email'),
+        try {
+            // 1. Insert into faculties table
+            $facultyData = [
+                'faculty_id' => $request->faculty_id,
+                'name' => $request->name,
+                'department' => $request->department,
+                'email' => $request->email,
+                'phone' => $request->phone ?? null, // Handle null phone
+                'borrowed_id' => $request->borrowed_id ?? null // Handle null borrowed_id
+            ];
+
+            DB::insert(
+                'INSERT INTO faculties (faculty_id, name, department, email, phone, borrowed_id) VALUES (?, ?, ?, ?, ?, ?)',
+                [
+                    $facultyData['faculty_id'],
+                    $facultyData['name'],
+                    $facultyData['department'],
+                    $facultyData['email'],
+                    $facultyData['phone'],
+                    $facultyData['borrowed_id']
+                ]
+            );
+
+            $lastFacultyId = DB::getPdo()->lastInsertId();
+
+            // 2. Insert into users table
+            $userData = [
+                'email' => $request->email,
                 'password_hash' => Hash::make($password),
                 'role' => 'faculty'
-            ]);
+            ];
+
+            DB::insert(
+                'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
+                [
+                    $userData['email'],
+                    $userData['password_hash'],
+                    $userData['role']
+                ]
+            );
 
             // Commit the transaction
             DB::commit();
+
+
+            return response()->json([
+                'message' => 'Faculty created successfully',
+            ], 201);
+
         } catch (\Exception $e) {
             // Rollback the transaction on error
             DB::rollBack();
-            return response()->json(['message' => 'Error creating faculty', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Error creating faculty',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json(['message' => 'Faculty created successfully', 'faculty' => $faculty], 201);
     }
 }
