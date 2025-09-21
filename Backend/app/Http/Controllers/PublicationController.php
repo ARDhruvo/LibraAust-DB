@@ -4,61 +4,177 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Cloudinary\Configuration\Configuration;
+use Cloudinary\Api\Upload\UploadApi;
 
 class PublicationController extends Controller
 {
-    // Get all publications
+    private function configureCloudinary()
+    {
+        Configuration::instance([
+            'cloud' => [
+                'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                'api_key'    => env('CLOUDINARY_API_KEY'),
+                'api_secret' => env('CLOUDINARY_API_SECRET')
+            ],
+            'url' => ['secure' => true]
+        ]);
+    }
+
     public function index(Request $request)
     {
         if ($request->has('type')) {
-            $publications = DB::select(
-                "SELECT * FROM publications WHERE type = ?",
-                [$request->type]
-            );
+            $publications = DB::select('SELECT * FROM publications WHERE type = ?', [$request->type]);
         } else {
-            $publications = DB::select("SELECT * FROM publications");
+            $publications = DB::select('SELECT * FROM publications');
         }
 
         return response()->json($publications);
     }
 
-    // Get single publication
     public function show($id)
     {
-        $publication = DB::select(
-            "SELECT * FROM publications WHERE id = ? LIMIT 1",
-            [$id]
-        );
-
-        if (!$publication) {
-            return response()->json(['message' => 'Publication not found'], 404);
+        $publication = DB::select('SELECT * FROM publications WHERE id = ?', [$id]);
+        if (empty($publication)) {
+            abort(404, 'Publication not found');
         }
-
         return response()->json($publication[0]);
     }
 
-    // Insert new publication
     public function store(Request $request)
     {
+        try {
+            $validated = $request->validate([
+                'title'            => 'required|string|max:255',
+                'author'           => 'required|string|max:255',
+                'isbn'             => 'nullable|string|max:255',
+                'publication_year' => 'nullable|integer',
+                'publisher'        => 'nullable|string|max:255',
+                'department'       => 'nullable|string|max:255',
+                'type'             => 'required|in:book,thesis',
+                'total_copies'     => 'nullable|integer|min:0',
+                'available_copies' => 'nullable|integer|min:0',
+                'shelf_location'   => 'nullable|string|max:255',
+                'description'      => 'nullable|string',
+                'cover'            => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:4096',
+            ]);
+
+            DB::beginTransaction();
+
+            $cover_url = null;
+            $cover_public_id = null;
+
+            if ($request->hasFile('cover')) {
+                $file = $request->file('cover');
+                if (!$file->isValid()) {
+                    DB::rollBack();
+                    return response()->json(['error' => 'Invalid file upload'], 400);
+                }
+
+                $this->configureCloudinary();
+                $uploadApi = new UploadApi();
+                $result = $uploadApi->upload($file->getRealPath(), [
+                    'folder' => 'library/publications',
+                ]);
+
+                $cover_url = $result['secure_url'];
+                $cover_public_id = $result['public_id'];
+            }
+
+            // always insert full column list
+            DB::insert(
+                'INSERT INTO publications 
+                 (title, author, isbn, publication_year, publisher, department, type, total_copies, available_copies, shelf_location, description, cover_url, cover_public_id) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $validated['title'],
+                    $validated['author'],
+                    $validated['isbn'] ?? null,
+                    $validated['publication_year'] ?? null,
+                    $validated['publisher'] ?? null,
+                    $validated['department'] ?? null,
+                    $validated['type'],
+                    $validated['total_copies'] ?? null,
+                    $validated['available_copies'] ?? null,
+                    $validated['shelf_location'] ?? null,
+                    $validated['description'] ?? null,
+                    $cover_url,
+                    $cover_public_id,
+                ]
+            );
+
+            $id = DB::getPdo()->lastInsertId();
+            $publication = DB::select('SELECT * FROM publications WHERE id = ?', [$id])[0];
+
+            DB::commit();
+
+            return response()->json($publication, 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Validation failed', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Publication creation failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create publication', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $pub = DB::select('SELECT * FROM publications WHERE id = ?', [$id]);
+        if (empty($pub)) {
+            abort(404, 'Publication not found');
+        }
+        $pub = $pub[0];
+
         $validated = $request->validate([
-            'title' => 'required|string',
-            'author' => 'required|string',
-            'isbn' => 'nullable|string',
+            'title'            => 'required|string|max:255',
+            'author'           => 'required|string|max:255',
+            'isbn'             => 'nullable|string|max:255',
             'publication_year' => 'nullable|integer',
-            'publisher' => 'nullable|string',
-            'department' => 'nullable|string',
-            'type' => 'required|in:book,thesis',
-            'total_copies' => 'nullable|integer',
-            'available_copies' => 'nullable|integer',
-            'shelf_location' => 'nullable|string',
-            'description' => 'nullable|string',
-            'cover_url' => 'nullable|string',
+            'publisher'        => 'nullable|string|max:255',
+            'department'       => 'nullable|string|max:255',
+            'type'             => 'required|in:book,thesis',
+            'total_copies'     => 'nullable|integer|min:0',
+            'available_copies' => 'nullable|integer|min:0',
+            'shelf_location'   => 'nullable|string|max:255',
+            'description'      => 'nullable|string',
+            'cover'            => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:4096',
         ]);
 
-        DB::insert(
-            "INSERT INTO publications 
-                (title, author, isbn, publication_year, publisher, department, type, total_copies, available_copies, shelf_location, description, cover_url, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+        DB::beginTransaction();
+
+        $cover_url = $pub->cover_url;
+        $cover_public_id = $pub->cover_public_id;
+
+        if ($request->hasFile('cover')) {
+            $this->configureCloudinary();
+
+            if (!empty($cover_public_id)) {
+                try {
+                    (new UploadApi())->destroy($cover_public_id);
+                } catch (\Exception $e) {
+                    \Log::warning("Failed to delete old Cloudinary image: " . $e->getMessage());
+                }
+            }
+
+            try {
+                $result = (new UploadApi())->upload($request->file('cover')->getRealPath(), [
+                    'folder' => 'library/publications',
+                ]);
+                $cover_url = $result['secure_url'];
+                $cover_public_id = $result['public_id'];
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json(['error' => 'Failed to upload image'], 500);
+            }
+        }
+
+        DB::update(
+            'UPDATE publications SET 
+             title = ?, author = ?, isbn = ?, publication_year = ?, publisher = ?, department = ?, type = ?, total_copies = ?, available_copies = ?, shelf_location = ?, description = ?, cover_url = ?, cover_public_id = ?
+             WHERE id = ?',
             [
                 $validated['title'],
                 $validated['author'],
@@ -67,85 +183,46 @@ class PublicationController extends Controller
                 $validated['publisher'] ?? null,
                 $validated['department'] ?? null,
                 $validated['type'],
-                $validated['total_copies'] ?? 1,
-                $validated['available_copies'] ?? 1,
+                $validated['total_copies'] ?? null,
+                $validated['available_copies'] ?? null,
                 $validated['shelf_location'] ?? null,
                 $validated['description'] ?? null,
-                $validated['cover_url'] ?? null,
+                $cover_url,
+                $cover_public_id,
+                $id,
             ]
         );
 
-        $publication = DB::select("SELECT * FROM publications ORDER BY id DESC LIMIT 1");
+        $updated = DB::select('SELECT * FROM publications WHERE id = ?', [$id])[0];
 
-        return response()->json($publication[0], 201);
+        DB::commit();
+
+        return response()->json($updated);
     }
 
-    // Update publication
-    public function update(Request $request, $id)
-{
-    $affected = DB::update(
-        "UPDATE publications 
-         SET title = ?, 
-             author = ?, 
-             department = ?, 
-             cover_url = ?, 
-             description = ?, 
-             publication_year = ?, 
-             publisher = ?, 
-             total_copies = ?, 
-             available_copies = ?, 
-             shelf_location = ?, 
-             updated_at = NOW()
-         WHERE id = ? AND type = ?",
-        [
-            $request->title,
-            $request->author,
-            $request->department,
-            $request->cover_url,
-            $request->description,
-            $request->publication_year,
-            $request->publisher,
-            $request->total_copies,
-            $request->available_copies,
-            $request->shelf_location,
-            $id,
-            $request->type
-        ]
-    );
-
-    if ($affected === 0) {
-        return response()->json(['message' => 'Publication not found or not updated'], 404);
-    }
-
-    return response()->json(['message' => 'Publication updated successfully']);
-}
-
-    // Delete publication
     public function destroy($id)
     {
-        $deleted = DB::delete("DELETE FROM publications WHERE id = ?", [$id]);
-
-        if ($deleted) {
-            return response()->json(['message' => 'Publication deleted']);
-        } else {
-            return response()->json(['message' => 'Publication not found'], 404);
+        $pub = DB::select('SELECT * FROM publications WHERE id = ?', [$id]);
+        if (empty($pub)) {
+            abort(404, 'Publication not found');
         }
-    }
+        $pub = $pub[0];
 
-    // Borrow a book (decrease available copies)
-    public function borrow($id)
-    {
-        $updated = DB::update(
-            "UPDATE publications SET available_copies = available_copies - 1, updated_at = NOW()
-             WHERE id = ? AND available_copies > 0",
-            [$id]
-        );
+        DB::beginTransaction();
 
-        if ($updated) {
-            $publication = DB::select("SELECT * FROM publications WHERE id = ? LIMIT 1", [$id]);
-            return response()->json($publication[0]);
-        } else {
-            return response()->json(['message' => 'Book not available'], 400);
+        if (!empty($pub->cover_public_id)) {
+            try {
+                $this->configureCloudinary();
+                (new UploadApi())->destroy($pub->cover_public_id);
+            } catch (\Exception $e) {
+                \Log::warning("Failed to delete Cloudinary image: " . $e->getMessage());
+            }
         }
+
+        DB::delete('DELETE FROM publications WHERE id = ?', [$id]);
+
+        DB::commit();
+
+        return response()->json(['message' => 'Publication deleted']);
     }
 }
