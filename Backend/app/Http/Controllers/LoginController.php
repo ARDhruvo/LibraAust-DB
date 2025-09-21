@@ -28,7 +28,7 @@ class LoginController extends Controller
             ],
         ]);
 
-        $user = DB::table('users')->where('email', $request->email)->first();
+        $user = DB::select('SELECT * FROM users WHERE email = ?', [$request->email]);
 
         // If the user is not found
         if (empty($user)) {
@@ -37,6 +37,8 @@ class LoginController extends Controller
                 'errors' => 'Invalid email or password',
             ], 401);
         }
+
+        $user = $user[0]; // Since select returns an array of results, get the first one
 
         // User found, check password hashing
         if (!Hash::check($request->password, $user->password_hash)) {
@@ -56,18 +58,26 @@ class LoginController extends Controller
         // This doesnt work either bc its null or something i guess
 
         $userModel = Users::find($user->id);
+        // $userModel = DB::select('SELECT * FROM users WHERE id = ?', [$user->id]);
+        // $userModel = $userModel[0]; // Get the first result from the array
         $token = $userModel->createToken('auth-token', expiresAt: now()->addDays(2))->plainTextToken;
         // Note to future self: This works because it has model on $userModel
         // Why is this different? I have no idea but just know that sanctum requires model 
 
         if ($user->role === 'student') {
-            $name = Students::where('email', $user->email)->value('name');
+            // $name = Students::where('email', $user->email)->value('name');
+            $name = DB::select('SELECT name FROM students WHERE email = ?', [$user->email]);
+            $name = $name[0]->name; // Get the name from the first result
         } elseif ($user->role === 'faculty') {
-            $name = Faculties::where('email', $user->email)->value('name');
+            // $name = Faculties::where('email', $user->email)->value('name');
+            $name = DB::select('SELECT name FROM faculties WHERE email = ?', [$user->email]);
+            $name = $name[0]->name; // Get the name from the first result
         }
         // Uncomment when yall add Librarians
         else {
-            $name = Librarians::where('email', $user->email)->value('name');
+            // $name = Librarians::where('email', $user->email)->value('name');
+            $name = DB::select('SELECT name FROM librarians WHERE email = ?', [$user->email]);
+            $name = $name[0]->name; // Get the name from the first result
         }
 
 
