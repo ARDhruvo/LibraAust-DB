@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="mt-16 border-t border-gray-200 bg-gray-50">
@@ -12,16 +14,16 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold mb-2">Quick Links</h4>
           <ul className="space-y-2 text-sm">
-            <li><a className="link" href="/">Home</a></li>
-            <li><a className="link" href="/resources">Resources</a></li>
-            <li><a className="link" href="/about/kfr">About</a></li>
-            <li><a className="link" href="/contact">Contact</a></li>
+            <li><Link className="link" to="/">Home</Link></li>
+            <li><Link className="link" to="/resources/books">Resources</Link></li>
+            <li><Link className="link" to="/about/kfr">About</Link></li>
+            <li><Link className="link" to="/contact">Contact</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="font-semibold mb-2">Contact</h4>
           <p className="text-sm">Email: library@aust.edu</p>
-          <p className="text-sm">Phone: +880-2-123456</p>
+          <p className="text-sm">Phone: +8801882441139</p>
           <p className="text-sm">Hours: 8:00 AM – 6:00 PM</p>
         </div>
       </div>
