@@ -4,15 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\LoginController as LoginController;
 
-
-use App\Http\Controllers\PublicationController;
-
-Route::get('/publications', [PublicationController::class, 'index']);
-Route::get('/publications/{id}', [PublicationController::class, 'show']);
-Route::post('/publications', [PublicationController::class, 'store']);
-Route::put('/publications/{id}', [PublicationController::class, 'update']);
-Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
-
 // routes/api.php
 use App\Http\Controllers\PageController;
 

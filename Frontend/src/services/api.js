@@ -1,8 +1,11 @@
-import axios from 'axios';
+import axios from "axios";
+
+const server = import.meta.env.VITE_API_URL;
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api', // Your Laravel backend
+  baseURL: `${server}/api`, // Your Laravel backend
+  // baseURL: "http://localhost:8000/api", // Your Laravel backend
   withCredentials: true, // Required for Sanctum cookies
 });
 
@@ -10,7 +13,7 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data);
+    console.error("API Error:", error.response?.data);
     return Promise.reject(error);
   }
 );

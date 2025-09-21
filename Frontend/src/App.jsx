@@ -1,80 +1,81 @@
 // src/App.jsx
-import { Routes, Route } from "react-router-dom"; // remove BrowserRouter
+import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "./state/AuthContext";
 import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
-//import Auth from "./pages/Auth";
-//import Profile from "./pages/Profile";
 import AboutPage from "./pages/AboutPage.jsx";
-//import Rules from "./pages/Rules";
 import BookDetails from "./pages/BookDetails";
-//import Announcements from "./pages/Announcements";
-//import Resources from "./pages/Resources";
 import Books from "./pages/Books";
-//import Thesis from "./pages/Thesis";
+import BookEdit from "./pages/BookEdit.jsx";
 import Contact from "./pages/Contact";
+import AddPublication from "./pages/AddPublication.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
-
-/* ✅ Added imports */
 import Thesis from "./pages/Thesis.jsx";
 import ThesisDetail from "./pages/ThesisDetail.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
-
-import BookEdit from "./pages/BookEdit.jsx";
 import ThesisEdit from "./pages/ThesisEdit.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import MyBorrows from "./pages/MyBorrows.jsx";
+import ManageBorrows from "./pages/ManageBorrows.jsx";
 
 export default function App() {
   return (
-    <>
+    <AuthProvider>
       <Navbar />
 
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
 
-        {/* ✅ Added routes for your three pages */}
+        {/* Public routes */}
+        <Route path="/resources/books" element={<Books />} />
         <Route path="/resources/thesis" element={<Thesis />} />
+        <Route path="/about/:slug" element={<AboutPage />} />
+        <Route path="/books/:id" element={<BookDetails />} />
         <Route path="/thesis/:id" element={<ThesisDetail />} />
+        <Route path="/contact" element={<Contact />} />
 
-        {/* If you want to protect profile later, wrap with ProtectedRoute */}
-        {/* 
+
+        {/* Protected routes - require authentication */}
         <Route
           path="/profile"
           element={
-            <ProtectedRoute roles={["student","teacher","librarian"]}>
+            <ProtectedRoute>
               <ProfilePage />
             </ProtectedRoute>
           }
         />
-        */}
-        <Route path="/profile" element={<ProfilePage />} />
-
-        {/* Other resources */}
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/resources/books" element={<Books />} />
-
-        {/* ✅ Keep dev’s code in the conflict: use /books/:id (not /book/:id) */}
-        <Route path="/books/:id" element={<BookDetails />} />
-        <Route path="/books/:id/edit" element={<BookEdit />} />
-        <Route path="/thesis/:id/edit" element={<ThesisEdit />} />
-        <Route path="/contact" element={<Contact />} />
-        
-        <Route path="/about/:slug" element={<AboutPage />} />
-        {/*
-        <Route path="/auth" element={<Auth />} />
         <Route
-          path="/manage/announcements"
+          path="/add-publication"
           element={
-            <ProtectedRoute roles={["librarian"]}>
-              <Announcements />
+            <ProtectedRoute>
+              <AddPublication />
             </ProtectedRoute>
           }
         />
-        
-        */}
+        <Route
+          path="/books/:id/edit"
+          element={
+            <ProtectedRoute>
+              <BookEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/thesis/:id/edit"
+          element={
+            <ProtectedRoute>
+              <ThesisEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/my-borrows" element={<MyBorrows />} />
+        <Route path="/manage-borrows" element={<ManageBorrows />} />
+
       </Routes>
 
       <Toaster
@@ -89,6 +90,6 @@ export default function App() {
       />
 
       <Footer />
-    </>
+    </AuthProvider>
   );
 }

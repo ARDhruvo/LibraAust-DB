@@ -4,9 +4,10 @@ import axios from "axios";
 import SearchBar from "../components/SearchBar.jsx";
 import Filters from "../components/Filters.jsx";
 import Pagination from "../components/Pagination.jsx";
-import BookCard from "../components/BookCard.jsx";
+import PublicationCard from "../components/PublicationCard.jsx";
 
 export default function Thesis() {
+  const server = import.meta.env.VITE_API_URL;
   const [theses, setTheses] = useState([]); // always an array → no filter error
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,7 +20,7 @@ export default function Thesis() {
   useEffect(() => {
     setLoading(true);
     axios
-      .get("http://localhost:8000/api/publications?type=thesis")
+      .get(`${server}/api/publications?type=thesis`)
       .then((res) => {
         // if backend returns data inside "data", handle both shapes
         const payload = res.data?.data || res.data || [];
@@ -56,9 +57,7 @@ export default function Thesis() {
   }
 
   if (error) {
-    return (
-      <div className="text-center py-10 text-red-500">{error}</div>
-    );
+    return <div className="text-center py-10 text-red-500">{error}</div>;
   }
 
   return (
@@ -67,7 +66,11 @@ export default function Thesis() {
 
       {/* Search + Filters */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-4 bg-white shadow-md rounded-xl p-4 mb-10">
-        <SearchBar value={query} onChange={setQuery} placeholder="Search thesis..." />
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Search thesis..."
+        />
         <Filters department={dept} onDepartmentChange={setDept} />
       </div>
 
@@ -82,7 +85,7 @@ export default function Thesis() {
               to={`/thesis/${t.id}`}
               className="block w-full hover:scale-[1.02] transition"
             >
-              <BookCard item={t} />
+              <PublicationCard item={t} />
             </Link>
           ))}
         </div>
@@ -90,7 +93,11 @@ export default function Thesis() {
 
       {/* Pagination */}
       <div className="mt-8">
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
